@@ -1,0 +1,22 @@
+services:
+  discord-bot:
+    build: .
+    container_name: discord-bot-container
+    volumes:
+      - .:/app  # Montage du dossier local dans le conteneur
+    env_file:
+      - .env    # Charge les variables d'environnement depuis le fichier .env
+    command: python -u main.py  # Commande pour démarrer le bot
+    restart: unless-stopped  # Redémarre automatiquement le conteneur en cas de crash
+    develop: 
+      watch:
+      - path: .
+        target: main.py
+        action: sync
+      - path: .
+        action: rebuild
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
