@@ -11,7 +11,7 @@ Ajouter vos tokens discord et token openapi
 docker-compose build && docker-compose up -d
 ```
 
-## Commande à utiliser 
+## Commandes bot discord 
 
 * /chat 
     * Utilise l'api de complétion d'openAI
@@ -21,7 +21,8 @@ docker-compose build && docker-compose up -d
         * model: C'est le model à utiliser (ex: "gpt-4o")
         * maxtokens: Nombre de tokens maximum
 
-2. /generate :
-Génère une image à l'aide d'un prompt 
-. Option
+* /generate :
+    * Génère une image à l'aide d'un prompt 
+    * Options:
+        * todo
 
