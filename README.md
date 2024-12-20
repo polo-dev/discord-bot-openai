@@ -1,7 +1,13 @@
-Construire l'image Docker :
+# Initialiser le bot
 
-bash
-Copier le code
-docker build -t discord-bot .
+## Environnement
 
-docker run --rm --name discord-bot-container -v $(pwd):/app -d discord-bot
+Dupliquer le fichier .env.dist en .env
+Ajouter vos tokens discord et token openapi
+
+## Construire l'image Docker :
+
+```
+docker-compose build && docker-compose up -d
+```
+
