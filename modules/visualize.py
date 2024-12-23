@@ -1,8 +1,12 @@
+import io
+import json
 import discord
+import aiohttp
 from discord.ext import commands
 from discord import app_commands
 from openai import OpenAI
 from typing import Optional
+from modules.helper import Helper
 
 class Visualize(commands.Cog):
     def __init__(self, bot, client: OpenAI):
@@ -38,7 +42,7 @@ class Visualize(commands.Cog):
         images = response.data
         print(images)
         urls = [item.url for item in images]
-        return "\n".join(urls)
+        return urls
     
     @app_commands.command(name="generate", description="Générer une image")
     @app_commands.describe(
@@ -67,6 +71,19 @@ class Visualize(commands.Cog):
         await interaction.response.defer(thinking=True)
 
         print(f"Received generate command: {message}, model={model}, size={size}, n={n}, style={style}, response_format={response_format}, quality={quality}")
+
+        # Créer un thread basé sur le message de commande
+        thread = await interaction.channel.create_thread(
+            name=f"Discussion avec {interaction.user.display_name}",
+            type=discord.ChannelType.public_thread,
+            message=await interaction.original_response(),
+        )
+
+        # Ajouter les variables au thread
+        await thread.send(f'{{"type":"visualize","model":"{model}", "size":"{size}", "n":{n}, "style":"{style}", "quality":"{quality}" }}')
+
+        await thread.send(f'**Prompt initial :** {message}')
+
         try:
             urls = await self.generate_image(
                 message=message,
@@ -77,10 +94,63 @@ class Visualize(commands.Cog):
                 response_format=response_format,
                 quality=quality
             )
-            print(urls)
-            await interaction.followup.send(content=urls)
+            await interaction.followup.send(f'Génération d\'image avec : {model}')
         except Exception as e:
             await interaction.followup.send(f"Erreur: {str(e)}", ephemeral=True)
+
+        try:
+            files = await Helper().upload_images(urls)
+            await thread.send(files=files)
+        except Exception as e:
+            await interaction.followup.send(f"Erreur: {str(e)}", ephemeral=True)
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        # return if its a bot
+        if message.author.bot:
+            return
+
+        #the first message is empty (the one that start the thread, so we take the second one)
+        async for msg in message.channel.history(limit=2, oldest_first=True):
+            first_message = msg
+
+        # return if the thread is initiated by a human
+        if first_message.author.bot is False:
+            return
+
+        try:
+            # the first message should be the parameters in a json format
+            params = json.loads(first_message.content)
+        except:
+            params = False
+
+        if not params or "type" not in params or params["type"] != 'visualize':
+            return  
+
+        thread = message.channel
+
+        print("Parameters for vizualize")
+        print(params)
+
+        try:
+            urls = await self.generate_image(
+                message=message.content,
+                model=params["model"],
+                size=params["size"],
+                n=params["n"],
+                style=params["style"], 
+                response_format="url",
+                quality=params["quality"]
+            )
+            print(urls)
+        except Exception as e:
+            await thread.send(f"Erreur: {str(e)}")
+        
+        try:
+            files = await Helper().upload_images(urls)
+            await thread.send(files=files)
+        except Exception as e:
+            await thread.send(f"Erreur: {str(e)}")
 
     @commands.Cog.listener()
     async def on_ready(self):
